@@ -1,27 +1,25 @@
 #ddev-generated
-# Install the Atlassian CLI (acli) in the web container.
-# https://developer.atlassian.com/cloud/acli/guides/install-linux/
+# Install the Atlassian Teamwork Graph CLI (twg) in the web container.
+# https://developer.atlassian.com/platform/teamwork-graph/twg-cli/getting-started/installation/
 #
-# ddev-webserver already bundles the Acquia CLI as /usr/local/bin/acli, and the
-# apt package installs the Atlassian one as /usr/bin/acli. Both are called
-# `acli` and /usr/local/bin precedes /usr/bin on PATH, so a bare `acli` still
-# runs the Acquia CLI. This add-on leaves it alone: use `ddev acli` (see
-# commands/web/acli) for the Atlassian CLI.
-RUN (command -v wget >/dev/null || (apt-get update && apt-get install -y --no-install-recommends wget ca-certificates)) \
-    && (command -v gpg >/dev/null || (apt-get update && apt-get install -y --no-install-recommends gnupg2)) \
-    && mkdir -p -m 755 /etc/apt/keyrings \
-    && wget -nv -O- https://acli.atlassian.com/gpg/public-key.asc \
-       | gpg --dearmor -o /etc/apt/keyrings/acli-archive-keyring.gpg \
-    && chmod go+r /etc/apt/keyrings/acli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/acli-archive-keyring.gpg] https://acli.atlassian.com/linux/deb stable main" \
-       > /etc/apt/sources.list.d/acli.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends acli \
-    && rm -rf /var/lib/apt/lists/*
-
-# `acli auth login` exits with "authentication failed" when it can't find
-# xdg-open. This one prints the OAuth URL so it can be opened on the host.
-# It stays off PATH so other tools keep seeing no xdg-open; the `ddev acli`
-# command adds it to PATH for acli only.
-COPY xdg-open.atlassian-cli /usr/local/libexec/acli/xdg-open
-RUN chmod 755 /usr/local/libexec/acli/xdg-open
+# The official installer writes to the current user's home directory, edits
+# the shell profile and starts the interactive login, so fetch the release
+# binary directly. The release manifest names the latest stable version, and
+# the binary is checked against the published SHA256SUMS.
+RUN (command -v curl >/dev/null && command -v jq >/dev/null) \
+      || (apt-get update && apt-get install -y --no-install-recommends ca-certificates curl jq \
+          && rm -rf /var/lib/apt/lists/*) \
+    && case "$(dpkg --print-architecture)" in \
+         amd64) arch=x64 ;; \
+         arm64) arch=arm64 ;; \
+         *) echo "twg has no build for $(dpkg --print-architecture)" >&2; exit 1 ;; \
+       esac \
+    && base=https://teamwork-graph.atlassian.com/cli \
+    && version=$(curl -fsSL --retry 2 "$base/manifest.json" | jq -er .version) \
+    && file="twg-linux-$arch-v$version" \
+    && tmp=$(mktemp -d) \
+    && curl -fsSL --retry 2 -o "$tmp/$file" "$base/$file" \
+    && curl -fsSL --retry 2 -o "$tmp/SHA256SUMS" "$base/SHA256SUMS-v$version" \
+    && (cd "$tmp" && grep "  $file\$" SHA256SUMS | sha256sum -c -) \
+    && install -m 755 "$tmp/$file" /usr/local/bin/twg \
+    && rm -rf "$tmp"

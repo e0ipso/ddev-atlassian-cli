@@ -40,21 +40,15 @@ setup() {
 }
 
 health_checks() {
-  # The Atlassian CLI is installed and reachable through `ddev acli`.
-  run ddev acli --version
+  # twg is installed and reachable through `ddev twg`.
+  run ddev twg -v
   assert_success
-  assert_output --partial "acli version"
+  assert_output --regexp '^[0-9]+\.[0-9]+\.[0-9]+'
 
-  # The bundled Acquia CLI is untouched, so a bare `acli` is still Acquia.
-  run ddev exec acli --version
+  # It is on the default PATH too, for `ddev ssh` and `ddev exec`.
+  run ddev exec 'command -v twg'
   assert_success
-  assert_output --partial "Acquia CLI"
-
-  # The xdg-open shim is only on PATH for `ddev acli`.
-  run ddev exec 'command -v xdg-open'
-  assert_failure
-  run ddev exec test -x /usr/local/libexec/acli/xdg-open
-  assert_success
+  assert_output "/usr/local/bin/twg"
 }
 
 teardown() {
