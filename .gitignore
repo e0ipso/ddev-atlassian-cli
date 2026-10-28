@@ -1,3 +1,4 @@
 .env
 /review.xml
 /review.guide.xml
+node_modules/

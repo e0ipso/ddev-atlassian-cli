@@ -69,6 +69,12 @@ ddev add-on remove atlassian-cli
 ddev restart
 ```
 
+## Contributing
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/), checked by [commitlint](https://commitlint.js.org/) in a husky `commit-msg` hook. Run `npm install` once to enable the hook.
+
+Releases are automatic. After the `tests` workflow passes on `main`, [semantic-release](https://semantic-release.gitbook.io/) reads the commits since the last tag. A `feat:` commit makes a minor release, a `fix:` or `perf:` commit makes a patch release, and a `BREAKING CHANGE:` footer makes a major one. Other types do not release.
+
 ## Credits
 
 **Contributed and maintained by [@e0ipso](https://github.com/e0ipso)**
