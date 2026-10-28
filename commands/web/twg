@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#ddev-generated
+
+## Description: Run the Atlassian Teamwork Graph CLI (twg). Log in with "ddev twg login".
+## Usage: twg [command] [flags]
+## Example: "ddev twg login" or "ddev twg jira workitem get ENT-1234"
+## ExecRaw: true
+
+exec twg "$@"
