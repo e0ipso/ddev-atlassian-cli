@@ -2,24 +2,23 @@
 # Install the Atlassian Teamwork Graph CLI (twg) in the web container.
 # https://developer.atlassian.com/platform/teamwork-graph/twg-cli/getting-started/installation/
 #
-# The official installer writes to the current user's home directory, edits
-# the shell profile and starts the interactive login, so fetch the release
-# binary directly. The release manifest names the latest stable version, and
-# the binary is checked against the published SHA256SUMS.
-RUN (command -v curl >/dev/null && command -v jq >/dev/null) \
-      || (apt-get update && apt-get install -y --no-install-recommends ca-certificates curl jq \
-          && rm -rf /var/lib/apt/lists/*) \
-    && case "$(dpkg --print-architecture)" in \
-         amd64) arch=x64 ;; \
-         arm64) arch=arm64 ;; \
-         *) echo "twg has no build for $(dpkg --print-architecture)" >&2; exit 1 ;; \
-       esac \
-    && base=https://teamwork-graph.atlassian.com/cli \
-    && version=$(curl -fsSL --retry 2 "$base/manifest.json" | jq -er .version) \
-    && file="twg-linux-$arch-v$version" \
-    && tmp=$(mktemp -d) \
-    && curl -fsSL --retry 2 -o "$tmp/$file" "$base/$file" \
-    && curl -fsSL --retry 2 -o "$tmp/SHA256SUMS" "$base/SHA256SUMS-v$version" \
-    && (cd "$tmp" && grep "  $file\$" SHA256SUMS | sha256sum -c -) \
-    && install -m 755 "$tmp/$file" /usr/local/bin/twg \
-    && rm -rf "$tmp"
+# Run the official installer unattended. It only skips its prompts when
+# --yes, --skip-login and --skip-skills are all given. Logging in happens
+# later with `ddev twg login`, and agent skills belong where the agent runs.
+# /usr/local/bin is already on PATH, so the installer leaves shell profiles
+# alone. The script is saved to a file first because `curl | sh` would hide
+# a failed download.
+#
+# --yes also records consent to Atlassian's terms in $HOME/.config/twg, and
+# twg leaves root-owned telemetry directories in $TMPDIR. Point both at a
+# throwaway directory so the image ships no consent, config, cache or temp
+# files. Users record their own consent with `ddev twg consent`.
+RUN (command -v curl >/dev/null || (apt-get update \
+      && apt-get install -y --no-install-recommends ca-certificates curl \
+      && rm -rf /var/lib/apt/lists/*)) \
+    && install_tmp=$(mktemp -d) \
+    && curl -fsSL --retry 2 -o "$install_tmp/install" https://teamwork-graph.atlassian.com/cli/install \
+    && HOME=$install_tmp TMPDIR=$install_tmp bash "$install_tmp/install" \
+         --install-dir /usr/local/bin --yes --skip-login --skip-skills \
+    && rm -rf "$install_tmp" \
+    && twg -v
