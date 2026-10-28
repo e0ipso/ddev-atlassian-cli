@@ -55,10 +55,12 @@ Add `TWG_TOKEN` to that file with an editor rather than on the command line, so 
 
 | File | Purpose |
 | ---- | ------- |
-| `.ddev/web-build/Dockerfile.atlassian-cli` | Downloads the latest stable `twg` release, verifies its SHA-256 checksum and installs it as `/usr/local/bin/twg` |
+| `.ddev/web-build/Dockerfile.atlassian-cli` | Runs Atlassian's [installer](https://teamwork-graph.atlassian.com/cli/install) unattended to install the latest stable `twg` as `/usr/local/bin/twg` |
 | `.ddev/commands/web/twg` | The `ddev twg` command |
 
-The image does not install the TWG agent skills or the upkeep helper. Skills belong where your agent runs, and the helper needs a user service manager that the container lacks.
+The build skips the installer's login and agent skills, and the image has no upkeep helper. Agent skills belong where your agent runs, and the helper needs a user service manager that the container lacks.
+
+The installer runs with a throwaway home directory, so the image records no consent to Atlassian's terms on your behalf. Run `ddev twg consent` to review and accept them.
 
 DDEV caches the web image, so `twg` stays at the version it was built with. Run `ddev debug rebuild` to pick up a new release. Do this when `twg` reports that it is too old for the current backend, because Atlassian blocks versions below a published minimum.
 
