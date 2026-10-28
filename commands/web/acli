@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#ddev-generated
+
+## Description: Run the Atlassian CLI (acli). Log in with "ddev acli auth login".
+## Usage: acli [command] [flags]
+## Example: "ddev acli auth login" or "ddev acli jira workitem view ENT-1234"
+## ExecRaw: true
+
+# The web container also bundles the Acquia CLI as /usr/local/bin/acli, which
+# shadows the Atlassian one on PATH. Call the Atlassian binary by its full path.
+#
+# acli opens its OAuth page with xdg-open, and the web container has no
+# browser. Put the xdg-open shim on PATH for acli only, so other tools keep
+# seeing no xdg-open.
+PATH="/usr/local/libexec/acli:$PATH" exec /usr/bin/acli "$@"

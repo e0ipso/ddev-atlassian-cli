@@ -1,6 +1,8 @@
 name: atlassian-cli
 
 project_files:
-  - docker-compose.atlassian-cli.yaml
+  - commands/web/acli
+  - web-build/Dockerfile.atlassian-cli
+  - web-build/xdg-open.atlassian-cli
 
 ddev_version_constraint: '>= v1.24.10'

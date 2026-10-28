@@ -40,17 +40,21 @@ setup() {
 }
 
 health_checks() {
-  # Do something useful here that verifies the add-on
-
-  # You can check for specific information in headers:
-  # run curl -sfI https://${PROJNAME}.ddev.site
-  # assert_output --partial "HTTP/2 200"
-  # assert_output --partial "test_header"
-
-  # Or check if some command gives expected output:
-  DDEV_DEBUG=true run ddev launch
+  # The Atlassian CLI is installed and reachable through `ddev acli`.
+  run ddev acli --version
   assert_success
-  assert_output --partial "FULLURL https://${PROJNAME}.ddev.site"
+  assert_output --partial "acli version"
+
+  # The bundled Acquia CLI is untouched, so a bare `acli` is still Acquia.
+  run ddev exec acli --version
+  assert_success
+  assert_output --partial "Acquia CLI"
+
+  # The xdg-open shim is only on PATH for `ddev acli`.
+  run ddev exec 'command -v xdg-open'
+  assert_failure
+  run ddev exec test -x /usr/local/libexec/acli/xdg-open
+  assert_success
 }
 
 teardown() {

@@ -3,11 +3,13 @@
 [![last commit](https://img.shields.io/github/last-commit/e0ipso/ddev-atlassian-cli)](https://github.com/e0ipso/ddev-atlassian-cli/commits)
 [![release](https://img.shields.io/github/v/release/e0ipso/ddev-atlassian-cli)](https://github.com/e0ipso/ddev-atlassian-cli/releases/latest)
 
-# DDEV Atlassian Cli
+# DDEV Atlassian CLI
 
 ## Overview
 
-This add-on integrates Atlassian Cli into your [DDEV](https://ddev.com/) project.
+This add-on installs the [Atlassian CLI](https://developer.atlassian.com/cloud/acli/guides/introduction/) (`acli`) in the [DDEV](https://ddev.com/) web container and adds a `ddev acli` command to run it.
+
+It also solves the OAuth login problem. `acli auth login` needs a browser, and the web container has none. The add-on ships an `xdg-open` shim that prints the login URL, so you can open it on your host and paste the resulting address back into the terminal.
 
 ## Installation
 
@@ -20,28 +22,52 @@ After installation, make sure to commit the `.ddev` directory to version control
 
 ## Usage
 
-| Command | Description |
-| ------- | ----------- |
-| `ddev describe` | View service status and used ports for Atlassian Cli |
-| `ddev logs -s atlassian-cli` | Check Atlassian Cli logs |
-
-## Advanced Customization
-
-To change the Docker image:
-
 ```bash
-ddev dotenv set .ddev/.env.atlassian-cli --atlassian-cli-docker-image="ddev/ddev-utilities:latest"
-ddev add-on get e0ipso/ddev-atlassian-cli
-ddev restart
+ddev acli auth login
+ddev acli jira workitem view ENT-1234
 ```
 
-Make sure to commit the `.ddev/.env.atlassian-cli` file to version control.
+`ddev acli` forwards all arguments to `acli`, so everything in the [Atlassian CLI documentation](https://developer.atlassian.com/cloud/acli/reference/commands/) works.
 
-All customization options (use with caution):
+### Logging in
 
-| Variable | Flag | Default |
-| -------- | ---- | ------- |
-| `ATLASSIAN_CLI_DOCKER_IMAGE` | `--atlassian-cli-docker-image` | `ddev/ddev-utilities:latest` |
+1. Run `ddev acli auth login`.
+2. Open the URL it prints in a browser on your host and accept the permissions.
+3. The browser then redirects to `http://127.0.0.1:<port>/callback?...` and fails to load, or shows a blank page. That is expected: the port belongs to `acli` inside the container.
+4. Copy the full address from the browser's address bar and paste it into the prompt (the input is hidden), then press Enter. The shim replays it to `acli` from inside the container and the login finishes.
+
+If the URL is not an Atlassian one, or no terminal is available, the shim only prints the URL.
+
+## Name clash with the Acquia CLI
+
+DDEV's web image already ships the Acquia CLI as `/usr/local/bin/acli`. This add-on does **not** remove it, so the two coexist:
+
+| Command | Runs |
+| ------- | ---- |
+| `ddev acli ...` | Atlassian CLI (`/usr/bin/acli`) |
+| `acli ...` inside `ddev ssh` or `ddev exec` | Acquia CLI (`/usr/local/bin/acli`) |
+| `/usr/bin/acli ...` inside `ddev ssh` or `ddev exec` | Atlassian CLI |
+
+Use `ddev acli` or the full path for Atlassian, and keep using bare `acli` for Acquia.
+
+## What gets installed
+
+| File | Purpose |
+| ---- | ------- |
+| `.ddev/web-build/Dockerfile.atlassian-cli` | Adds the Atlassian apt repository and installs `acli` in the web image |
+| `.ddev/web-build/xdg-open.atlassian-cli` | Login shim, installed as `/usr/local/libexec/acli/xdg-open` |
+| `.ddev/commands/web/acli` | The `ddev acli` command. Puts the shim on `PATH` for `acli` only |
+
+The shim is kept off the default `PATH`, so other tools in the container still see no `xdg-open`.
+
+The image is rebuilt on `ddev restart`. The `acli` package comes from the `stable` channel of the Atlassian apt repository, so it updates whenever the web image is rebuilt (`ddev debug rebuild`).
+
+## Removal
+
+```bash
+ddev add-on remove atlassian-cli
+ddev restart
+```
 
 ## Credits
 
