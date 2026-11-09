@@ -51,6 +51,43 @@ health_checks() {
   assert_output "/usr/local/bin/twg"
 }
 
+# Checks for the persistent login. The release test skips them until a release
+# ships it.
+login_checks() {
+  # The twg config directory is in the project, so the login survives a restart.
+  run ddev exec 'echo "$TWG_CONFIG_DIR"'
+  assert_success
+  assert_output "/var/www/html/.ddev/twg"
+  run ddev exec 'twg env --list | grep -A3 "^  TWG_CONFIG_DIR"'
+  assert_success
+  assert_output --partial 'current: "/var/www/html/.ddev/twg"'
+
+  # A file twg would write there outlives the container. Writing auth.conf
+  # directly avoids a real login or recording consent to Atlassian's terms.
+  run ddev exec 'echo probe > "$TWG_CONFIG_DIR/auth.conf"'
+  assert_success
+  run ddev restart -y
+  assert_success
+  run ddev exec 'cat "$TWG_CONFIG_DIR/auth.conf"'
+  assert_success
+  assert_output "probe"
+
+  # git ignores what twg writes there, but not the ignore file itself.
+  run git -C "${TESTDIR}" init -q
+  assert_success
+  run git -C "${TESTDIR}" check-ignore -q .ddev/twg/auth.conf
+  assert_success
+  run git -C "${TESTDIR}" check-ignore -q .ddev/twg/.gitignore
+  assert_failure
+}
+
+removal_checks() {
+  run ddev add-on remove atlassian-cli
+  assert_success
+  assert_dir_not_exists "${TESTDIR}/.ddev/twg"
+  assert_file_not_exists "${TESTDIR}/.ddev/docker-compose.atlassian-cli.yaml"
+}
+
 teardown() {
   set -eu -o pipefail
   ddev delete -Oy "${PROJNAME}" >/dev/null 2>&1
@@ -71,6 +108,8 @@ teardown() {
   run ddev restart -y
   assert_success
   health_checks
+  login_checks
+  removal_checks
 }
 
 # bats test_tags=release

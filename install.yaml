@@ -2,6 +2,12 @@ name: atlassian-cli
 
 project_files:
   - commands/web/twg
+  - docker-compose.atlassian-cli.yaml
+  - twg/.gitignore
   - web-build/Dockerfile.atlassian-cli
+
+# Delete the stored twg login with the add-on.
+removal_actions:
+  - rm -rf twg
 
 ddev_version_constraint: '>= v1.24.10'
