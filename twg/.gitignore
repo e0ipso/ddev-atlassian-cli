@@ -1,0 +1,6 @@
+#ddev-generated
+# twg keeps its login here, including the access token in plain text.
+# Ignore everything but this file, so teammates who clone the project get the
+# ignore rule too.
+*
+!.gitignore

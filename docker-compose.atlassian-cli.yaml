@@ -1,0 +1,9 @@
+#ddev-generated
+# Keep the `ddev twg login` across restarts and rebuilds. twg stores it in
+# ~/.config/twg by default, and DDEV recreates the container on every start.
+# .ddev/twg is inside the project mount, so the login persists and no other
+# DDEV project can read it. twg/.gitignore keeps it out of version control.
+services:
+  web:
+    environment:
+      - TWG_CONFIG_DIR=/var/www/html/.ddev/twg
